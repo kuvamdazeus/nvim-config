@@ -157,6 +157,8 @@ vim.opt.cursorline = true
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.opt.scrolloff = 10
 
+vim.opt.termguicolors = true
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
@@ -176,10 +178,10 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
+vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
+vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
+vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
@@ -189,6 +191,12 @@ vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left wind
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+
+-- oil.nvim keymaps
+-- vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
+-- vim.keymap.set('n', '<leader>-', '<CMD>Oil --float<CR>', { desc = 'Open floating parent directory' })
+
+vim.keymap.set('n', '<leader>x', '<CMD>:bd<CR>', { desc = 'Delete the current buffer' })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -493,6 +501,29 @@ require('lazy').setup({
       -- If you're wondering about lsp vs treesitter, you can check out the wonderfully
       -- and elegantly composed help section, `:help lsp-vs-treesitter`
 
+      vim.api.nvim_create_autocmd('BufWritePre', {
+        pattern = '*.go',
+        callback = function()
+          local params = vim.lsp.util.make_range_params()
+          params.context = { only = { 'source.organizeImports' } }
+          -- buf_request_sync defaults to a 1000ms timeout. Depending on your
+          -- machine and codebase, you may want longer. Add an additional
+          -- argument after params if you find that you have to write the file
+          -- twice for changes to be saved.
+          -- E.g., vim.lsp.buf_request_sync(0, "textDocument/codeAction", params, 3000)
+          local result = vim.lsp.buf_request_sync(0, 'textDocument/codeAction', params)
+          for cid, res in pairs(result or {}) do
+            for _, r in pairs(res.result or {}) do
+              if r.edit then
+                local enc = (vim.lsp.get_client_by_id(cid) or {}).offset_encoding or 'utf-16'
+                vim.lsp.util.apply_workspace_edit(r.edit, enc)
+              end
+            end
+          end
+          vim.lsp.buf.format { async = false }
+        end,
+      })
+
       --  This function gets run when an LSP attaches to a particular buffer.
       --    That is to say, every time a new file is opened that is associated with
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
@@ -606,9 +637,15 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         -- clangd = {},
-        -- gopls = {},
+        gopls = {
+          analyses = {
+            unusedparams = true,
+          },
+          staticcheck = true,
+          gofumpt = true,
+        },
         -- pyright = {},
-        -- rust_analyzer = {},
+        rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
@@ -863,6 +900,14 @@ require('lazy').setup({
       -- - sr)'  - [S]urround [R]eplace [)] [']
       require('mini.surround').setup()
 
+      require('mini.files').setup {
+        windows = {
+          preview = true,
+          width_preview = 50,
+        },
+      }
+      vim.keymap.set('n', '<leader>-', require('mini.files').open, { desc = 'Open file explorer' })
+
       -- Simple and easy statusline.
       --  You could remove this setup call if you don't like it,
       --  and try some other statusline plugin
@@ -907,6 +952,69 @@ require('lazy').setup({
     --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
     --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
   },
+
+  {
+    'akinsho/bufferline.nvim',
+    version = '*',
+    dependencies = 'nvim-tree/nvim-web-devicons',
+    config = function()
+      require('bufferline').setup {}
+
+      -- Go to buffer 1-9 and last buffer
+      vim.keymap.set('n', '<leader>1', function()
+        require('bufferline').go_to(1, true)
+      end, { silent = true, desc = 'Go to buffer 1' })
+      vim.keymap.set('n', '<leader>2', function()
+        require('bufferline').go_to(2, true)
+      end, { silent = true, desc = 'Go to buffer 2' })
+      vim.keymap.set('n', '<leader>3', function()
+        require('bufferline').go_to(3, true)
+      end, { silent = true, desc = 'Go to buffer 3' })
+      vim.keymap.set('n', '<leader>4', function()
+        require('bufferline').go_to(4, true)
+      end, { silent = true, desc = 'Go to buffer 4' })
+      vim.keymap.set('n', '<leader>5', function()
+        require('bufferline').go_to(5, true)
+      end, { silent = true, desc = 'Go to buffer 5' })
+      vim.keymap.set('n', '<leader>6', function()
+        require('bufferline').go_to(6, true)
+      end, { silent = true, desc = 'Go to buffer 6' })
+      vim.keymap.set('n', '<leader>7', function()
+        require('bufferline').go_to(7, true)
+      end, { silent = true, desc = 'Go to buffer 7' })
+      vim.keymap.set('n', '<leader>8', function()
+        require('bufferline').go_to(8, true)
+      end, { silent = true, desc = 'Go to buffer 8' })
+      vim.keymap.set('n', '<leader>9', function()
+        require('bufferline').go_to(9, true)
+      end, { silent = true, desc = 'Go to buffer 9' })
+      vim.keymap.set('n', '<leader>$', function()
+        require('bufferline').go_to(-1, true)
+      end, { silent = true, desc = 'Go to last buffer' })
+
+      -- Cycle through buffers
+      vim.keymap.set('n', '<leader>[', ':BufferLineCyclePrev<CR>', { silent = true, desc = 'Next buffer' })
+      vim.keymap.set('n', '<leader>]', ':BufferLineCycleNext<CR>', { silent = true, desc = 'Previous buffer' })
+    end,
+  },
+
+  -- {
+  --   'stevearc/oil.nvim',
+  --   opts = {
+  --     skip_confirm_for_simple_edits = false,
+  --     default_file_explorer = true,
+  --     columns = {
+  --       'icon',
+  --       'size',
+  --     },
+  --     view_options = {
+  --       show_hidden = true,
+  --     },
+  --     keymaps = {
+  --       ['<C-h>'] = false,
+  --     },
+  --   },
+  -- },
 
   -- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
