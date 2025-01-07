@@ -198,6 +198,8 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 vim.keymap.set('n', '<leader>x', '<CMD>:bd<CR>', { desc = 'Delete the current buffer' })
 
+vim.g.zig_fmt_parse_errors = 0
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -637,6 +639,9 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         -- clangd = {},
+        zls = {
+          enable_build_on_save = true,
+        },
         gopls = {
           analyses = {
             unusedparams = true,
@@ -982,16 +987,13 @@ require('lazy').setup({
         require('bufferline').go_to(6, true)
       end, { silent = true, desc = 'Go to buffer 6' })
       vim.keymap.set('n', '<leader>7', function()
-        require('bufferline').go_to(7, true)
-      end, { silent = true, desc = 'Go to buffer 7' })
+        require('bufferline').go_to(-3, false)
+      end, { silent = true, desc = 'Go to third last buffer' })
       vim.keymap.set('n', '<leader>8', function()
-        require('bufferline').go_to(8, true)
-      end, { silent = true, desc = 'Go to buffer 8' })
+        require('bufferline').go_to(-2, false)
+      end, { silent = true, desc = 'Go to second last buffer' })
       vim.keymap.set('n', '<leader>9', function()
-        require('bufferline').go_to(9, true)
-      end, { silent = true, desc = 'Go to buffer 9' })
-      vim.keymap.set('n', '<leader>$', function()
-        require('bufferline').go_to(-1, true)
+        require('bufferline').go_to(-1, false)
       end, { silent = true, desc = 'Go to last buffer' })
 
       -- Cycle through buffers
